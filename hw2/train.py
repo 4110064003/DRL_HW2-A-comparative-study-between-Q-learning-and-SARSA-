@@ -13,7 +13,7 @@ This will:
 
 from __future__ import annotations
 
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,15 +26,22 @@ EPISODES = 500
 NUM_RUNS = 50
 SEED = 0
 SMOOTH_WINDOW = 20
+EPSILON_VALUES = [0.01, 0.1, 0.3]
+EPSILON_NUM_RUNS = 5
+EPSILON_EPISODES = 300
 
 
-def run_q_learning(env: CliffWalkingEnv) -> Tuple[List[float], QLearningAgent]:
-	config = AgentConfig(epsilon=0.1, alpha=0.1, gamma=0.9)
+def run_q_learning(
+	env: CliffWalkingEnv,
+	epsilon: float = 0.1,
+	episodes: int = EPISODES,
+) -> Tuple[List[float], QLearningAgent]:
+	config = AgentConfig(epsilon=epsilon, alpha=0.1, gamma=0.9)
 	agent = QLearningAgent(env.n_states, env.n_actions, config=config, seed=SEED)
 
 	episode_returns: List[float] = []
 
-	for _ in range(EPISODES):
+	for _ in range(episodes):
 		state = env.reset()
 		done = False
 		total_reward = 0.0
@@ -51,13 +58,17 @@ def run_q_learning(env: CliffWalkingEnv) -> Tuple[List[float], QLearningAgent]:
 	return episode_returns, agent
 
 
-def run_sarsa(env: CliffWalkingEnv) -> Tuple[List[float], SarsaAgent]:
-	config = AgentConfig(epsilon=0.1, alpha=0.1, gamma=0.9)
+def run_sarsa(
+	env: CliffWalkingEnv,
+	epsilon: float = 0.1,
+	episodes: int = EPISODES,
+) -> Tuple[List[float], SarsaAgent]:
+	config = AgentConfig(epsilon=epsilon, alpha=0.1, gamma=0.9)
 	agent = SarsaAgent(env.n_states, env.n_actions, config=config, seed=SEED)
 
 	episode_returns: List[float] = []
 
-	for _ in range(EPISODES):
+	for _ in range(episodes):
 		state = env.reset()
 		action = agent.select_action(state)
 		done = False
@@ -110,6 +121,80 @@ def plot_learning_curves(q_returns: List[float], sarsa_returns: List[float]) -> 
 	plt.legend()
 	plt.grid(True, alpha=0.3)
 	plt.tight_layout()
+	plt.savefig("reward_curve_50runAverage.png", dpi=150)
+
+
+def plot_epsilon_comparison(
+	epsilon_values: List[float],
+	q_curves: Dict[float, List[float]],
+	sarsa_curves: Dict[float, List[float]],
+) -> None:
+	"""Plot smoothed averaged curves under different epsilon values."""
+
+	def moving_average(values: List[float], window: int) -> np.ndarray:
+		arr = np.asarray(values, dtype=float)
+		if window <= 1:
+			return arr
+		kernel = np.ones(window, dtype=float)
+		numer = np.convolve(arr, kernel, mode="same")
+		denom = np.convolve(np.ones_like(arr), kernel, mode="same")
+		return numer / np.maximum(denom, 1e-12)
+
+	episodes = np.arange(1, len(next(iter(q_curves.values()))) + 1)
+	fig, axes = plt.subplots(1, 2, figsize=(12, 4.5), sharey=True)
+
+	for eps in epsilon_values:
+		q_smooth = moving_average(q_curves[eps], SMOOTH_WINDOW)
+		s_smooth = moving_average(sarsa_curves[eps], SMOOTH_WINDOW)
+		axes[0].plot(episodes, q_smooth, linewidth=2.0, label=f"epsilon={eps}")
+		axes[1].plot(episodes, s_smooth, linewidth=2.0, label=f"epsilon={eps}")
+
+	axes[0].set_title("Q-learning by epsilon")
+	axes[1].set_title("SARSA by epsilon")
+	for ax in axes:
+		ax.set_xlabel("Episode")
+		ax.grid(True, alpha=0.3)
+		ax.legend()
+	axes[0].set_ylabel("Return (sum of rewards)")
+	fig.suptitle(f"Epsilon Comparison (averaged over {NUM_RUNS} runs)")
+	fig.tight_layout()
+	fig.savefig("reward_curve_epsilon_comparison.png", dpi=150)
+
+
+def epsilon_experiment(env_config: CliffWalkingConfig) -> None:
+	"""Run and report epsilon sweep results for both algorithms."""
+
+	q_avg_by_eps: Dict[float, List[float]] = {}
+	sarsa_avg_by_eps: Dict[float, List[float]] = {}
+
+	print(
+		f"\n=== Epsilon Sweep Summary (last 100 episodes average return, "
+		f"{EPSILON_NUM_RUNS} runs, {EPSILON_EPISODES} episodes/run) ==="
+	)
+	for eps in EPSILON_VALUES:
+		q_runs: List[List[float]] = []
+		sarsa_runs: List[List[float]] = []
+
+		for run_idx in range(EPSILON_NUM_RUNS):
+			run_seed = SEED + 1000 + int(eps * 1000) + run_idx
+			env_q = CliffWalkingEnv(env_config, seed=run_seed)
+			env_s = CliffWalkingEnv(env_config, seed=run_seed)
+
+			q_returns, _ = run_q_learning(env_q, epsilon=eps, episodes=EPSILON_EPISODES)
+			sarsa_returns, _ = run_sarsa(env_s, epsilon=eps, episodes=EPSILON_EPISODES)
+			q_runs.append(q_returns)
+			sarsa_runs.append(sarsa_returns)
+
+		q_avg = np.mean(np.asarray(q_runs, dtype=float), axis=0).tolist()
+		s_avg = np.mean(np.asarray(sarsa_runs, dtype=float), axis=0).tolist()
+		q_avg_by_eps[eps] = q_avg
+		sarsa_avg_by_eps[eps] = s_avg
+
+		q_last100 = float(np.mean(q_avg[-100:]))
+		s_last100 = float(np.mean(s_avg[-100:]))
+		print(f"epsilon={eps:.2f} | Q-learning={q_last100:.3f} | SARSA={s_last100:.3f}")
+
+	plot_epsilon_comparison(EPSILON_VALUES, q_avg_by_eps, sarsa_avg_by_eps)
 
 
 def derive_greedy_path(env: CliffWalkingEnv, q_values: np.ndarray, max_steps: int = 100) -> List[Tuple[int, int]]:
@@ -234,8 +319,8 @@ def main() -> None:
 		env_for_q = CliffWalkingEnv(env_config, seed=run_seed)
 		env_for_sarsa = CliffWalkingEnv(env_config, seed=run_seed)
 
-		q_returns, q_agent_run = run_q_learning(env_for_q)
-		sarsa_returns, sarsa_agent_run = run_sarsa(env_for_sarsa)
+		q_returns, q_agent_run = run_q_learning(env_for_q, epsilon=0.1)
+		sarsa_returns, sarsa_agent_run = run_sarsa(env_for_sarsa, epsilon=0.1)
 
 		q_runs.append(q_returns)
 		sarsa_runs.append(sarsa_returns)
@@ -260,6 +345,10 @@ def main() -> None:
 	env_vis_sarsa = CliffWalkingEnv(env_config, seed=SEED)
 	sarsa_path = derive_greedy_path(env_vis_sarsa, sarsa_agent.q_values)
 	plot_policy_with_path(env_vis_sarsa, sarsa_agent.q_values, sarsa_path, title="Sarsa policy")
+	plt.savefig("Sarsa_policy.png", dpi=150)
+
+	# Additional experiment: compare different exploration strengths.
+	epsilon_experiment(env_config)
 
 	plt.show()
 
