@@ -29,31 +29,39 @@
   - `epsilon in [0.01, 0.1, 0.3]`
   - 額外做輕量 sweep 比較 exploration 影響
 
+## Project Structure
+
+- `hw2/`：核心程式碼（環境、代理人、訓練流程）
+- `assets/images/`：實驗結果圖片
+- `docs/reports/`：報告 PDF / MD
+- `docs/transcripts/`：對話整理檔
+- `scripts/`：startup / ending 腳本
+
 ## Results (PNG)
 
 ### 1. Baseline reward curve (50-run average)
-![Reward Curve 50-run Average](reward_curve_50runAverage.png)
+![Reward Curve 50-run Average](assets/images/reward_curve_50runAverage.png)
 
 說明：
 - 兩種方法都能隨訓練提升回報。
 - Q-learning 與 SARSA 收斂速度接近，但波動特性不同。
 
 ### 2. Final policy: Q-learning
-![Q-learning Policy](Q_learning_policy.png)
+![Q-learning Policy](assets/images/Q_learning_policy.png)
 
 說明：
 - Q-learning 常學到較貼近懸崖的短路徑。
 - 在有探索時可能承擔較高風險。
 
 ### 3. Final policy: SARSA
-![SARSA Policy](Sarsa_policy.png)
+![SARSA Policy](assets/images/Sarsa_policy.png)
 
 說明：
 - SARSA 傾向保守路徑，與懸崖保持更安全距離。
 - 在持續探索下通常更穩健。
 
 ### 4. Epsilon comparison
-![Epsilon Comparison](reward_curve_epsilon_comparison.png)
+![Epsilon Comparison](assets/images/reward_curve_epsilon_comparison.png)
 
 說明：
 - `epsilon` 增大時（探索更強），兩者回報都下降。
@@ -75,16 +83,36 @@ python -m hw2.train
 ```
 
 執行後會產生/更新：
-- `reward_curve_50runAverage.png`
-- `Q_learning_policy.png`
-- `Sarsa_policy.png`
-- `reward_curve_epsilon_comparison.png`
+- `assets/images/reward_curve_50runAverage.png`
+- `assets/images/Q_learning_policy.png`
+- `assets/images/Sarsa_policy.png`
+- `assets/images/reward_curve_epsilon_comparison.png`
 
 ## Report
 完整分析請見：
-- `HW2_Qlearning_vs_SARSA_Report.md`
-- `HW2_Qlearning_vs_SARSA_Report.pdf`
+- `docs/reports/HW2_Qlearning_vs_SARSA_Report.md`
+- `docs/reports/HW2_Qlearning_vs_SARSA_Report.pdf`
+
+對話整理：
+- `docs/transcripts/conversation_transcript.md`
+- `docs/transcripts/conversation_transcript.pdf`
 
 ## Scripts
-- `startup.cmd` / `startup.ps1`: 抓取或更新專案內容
-- `ending.cmd` / `ending.ps1`: 快速 commit + push（可自訂 commit message）
+- `scripts/startup.cmd` / `scripts/startup.ps1`: 抓取或更新專案內容
+- `scripts/ending.cmd` / `scripts/ending.ps1`: 快速 commit + push（可自訂 commit message）
+
+### ending.cmd 使用方式
+
+建議直接傳入 commit message：
+
+```bat
+scripts\ending.cmd "新增AI chat紀錄、歸檔整理"
+```
+
+若使用標籤式寫法，也可：
+
+```bat
+scripts\ending.cmd "CommitMessage" "新增AI chat紀錄、歸檔整理"
+```
+
+注意：第二種寫法的兩個引號之間要有空白，不能寫成連在一起的 `"CommitMessage""新增..."`。

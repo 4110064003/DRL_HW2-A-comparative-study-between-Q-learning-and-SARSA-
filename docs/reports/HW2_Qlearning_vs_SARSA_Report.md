@@ -17,7 +17,7 @@
 
 ### 1.1 學習表現（Total Reward 曲線 + 收斂速度）
 
-![Reward Curve](reward_curve_50runAverage.png)
+![Reward Curve](../../assets/images/reward_curve_50runAverage.png)
 
 - 兩種方法在前期都由較低回報快速提升，代表都能有效學到可行策略。
 - 在中後期，兩者平均回報逐漸趨於平穩，但仍可見部分波動。
@@ -28,9 +28,9 @@
 
 ### 1.2 策略行為（最終路徑 + 冒險/保守）
 
-![Q-learning Policy](Q_learning_policy.png)
+![Q-learning Policy](../../assets/images/Q_learning_policy.png)
 
-![Sarsa Policy](Sarsa_policy.png)
+![Sarsa Policy](../../assets/images/Sarsa_policy.png)
 
 - Q-learning 最終策略通常更貼近懸崖邊緣的「短路徑」，因為其更新目標偏向理論上的最大未來價值。
 - SARSA 最終策略通常更傾向保留安全距離，路徑較保守，避免在探索期間頻繁踩入懸崖。
@@ -50,7 +50,7 @@
 - 每個 epsilon 以 `5 runs`、每次 `300 episodes` 估計趨勢。
 - 指標採用「最後 100 回合平均回報（Last-100 Avg Return）」。
 
-![Epsilon Comparison](reward_curve_epsilon_comparison.png)
+![Epsilon Comparison](../../assets/images/reward_curve_epsilon_comparison.png)
 
 實驗結果如下：
 
